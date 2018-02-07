@@ -99,7 +99,7 @@ public class ReingoldTilford : IGraphLayout
         }
 
         // Bake the left to right horizontal positions.
-        var horizontalPositionForDepth = new float[maxDepth + 1];
+        var horizontalPositionForDepth = new float[maxDepth];
         horizontalPositionForDepth[0] = 0;
         for (int d = 1; d < maxDepth; ++d)
         {

@@ -36,6 +36,7 @@ public class DefaultGraphRenderer : IGraphRenderer
     private Node m_SelectedNode;
 
     private Texture2D m_ColorBar;
+    Vector2 m_ScrollPos;
 
     private struct NodeTypeLegend
     {
@@ -210,7 +211,11 @@ public class DefaultGraphRenderer : IGraphRenderer
 
         if (m_SelectedNode != null)
         {
-            GUILayout.Label(m_SelectedNode.ToString(), m_InspectorStyle);
+            using (var scrollView = new EditorGUILayout.ScrollViewScope(m_ScrollPos))
+            {
+                m_ScrollPos = scrollView.scrollPosition;
+                GUILayout.Label(m_SelectedNode.ToString(), m_InspectorStyle);
+            }
         }
         else
         {
@@ -436,9 +441,9 @@ public class DefaultGraphRenderer : IGraphRenderer
     {
         string nodeType = node.GetContentTypeName();
         NodeTypeLegend nodeTypeLegend = m_LegendForType[nodeType];
-        string formatedLabel = Regex.Replace(nodeTypeLegend.label, "(\\B[A-Z])", "\n$1"); // Split into multi-lines
+        string formattedLabel = Regex.Replace(nodeTypeLegend.label, "((?<![A-Z])\\B[A-Z])", "\n$1"); // Split into multi-lines
 
-        DrawRect(nodeRect, nodeTypeLegend.color, formatedLabel, node.active, selected);
+        DrawRect(nodeRect, nodeTypeLegend.color, formattedLabel, node.active, selected);
     }
 
     // Compute the tangents for the graphLayout edges. Assumes that graphLayout is drawn from left to right
