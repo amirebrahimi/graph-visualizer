@@ -50,6 +50,11 @@ public class DefaultGraphRenderer : IGraphRenderer
         InitializeStyles();
     }
 
+    public void Reset()
+    {
+        m_SelectedNode = null;
+    }
+
     public void Draw(IGraphLayout graphLayout, Rect drawingArea)
     {
         GraphSettings defaults;
