@@ -1,3 +1,4 @@
+#if UNITY_2018_1_OR_NEWER
 using UnityEngine;
 using UnityEditor;
 using System.Collections.Generic;
@@ -5,38 +6,44 @@ using System;
 using System.Linq;
 using System.Text.RegularExpressions;
 using GraphVisualizer;
+using UnityEditor.Experimental.UIElements.GraphView;
+using UnityEngine.Experimental.UIElements;
 using UnityEngine.Playables;
+using Edge = GraphVisualizer.Edge;
+using Node = GraphVisualizer.Node;
+using GraphViewNode = UnityEditor.Experimental.UIElements.GraphView.Node;
+using GraphViewEdge = UnityEditor.Experimental.UIElements.GraphView.Edge;
 
-public class DefaultGraphRenderer : IGraphRenderer
+public class GraphViewRenderer : IGraphRenderer
 {
     public event Action<Node> nodeClicked;
-    private static readonly Color s_EdgeColorMin = new Color(1.0f, 1.0f, 1.0f, 0.1f);
-    private static readonly Color s_EdgeColorMax = Color.white;
-    private static readonly Color s_LegendBackground = new Color(0, 0, 0, 0.1f);
+    static readonly Color s_EdgeColorMin = new Color(1.0f, 1.0f, 1.0f, 0.1f);
+    static readonly Color s_EdgeColorMax = Color.white;
+    static readonly Color s_LegendBackground = new Color(0, 0, 0, 0.1f);
 
-    private static readonly float s_BorderSize = 15;
-    private static readonly float s_LegendFixedOverheadWidth = 100;
-    private static readonly float s_DefaultMaximumNormalizedNodeSize = 0.8f;
-    private static readonly float s_DefaultMaximumNodeSizeInPixels = 100.0f;
-    private static readonly float s_DefaultAspectRatio = 1.5f;
+    static readonly float s_BorderSize = 15;
+    static readonly float s_LegendFixedOverheadWidth = 100;
+    static readonly float s_DefaultMaximumNormalizedNodeSize = 0.8f;
+    static readonly float s_DefaultMaximumNodeSizeInPixels = 100.0f;
+    static readonly float s_DefaultAspectRatio = 1.5f;
 
-    private static readonly int s_NodeMaxFontSize = 14;
+    static readonly int s_NodeMaxFontSize = 14;
 
-    private GUIStyle m_LegendLabelStyle;
-    private GUIStyle m_SubTitleStyle;
-    private GUIStyle m_InspectorStyle;
-    private GUIStyle m_NodeRectStyle;
+    GUIStyle m_LegendLabelStyle;
+    GUIStyle m_SubTitleStyle;
+    GUIStyle m_InspectorStyle;
+    GUIStyle m_NodeRectStyle;
 
-    private static readonly int s_ActiveNodeThickness = 2;
-    private static readonly int s_SelectedNodeThickness = 4;
-    private static readonly Color s_ActiveNodeColor = Color.white;
-    private static readonly Color s_SelectedNodeColor = Color.yellow;
+    static readonly int s_ActiveNodeThickness = 2;
+    static readonly int s_SelectedNodeThickness = 4;
+    static readonly Color s_ActiveNodeColor = Color.white;
+    static readonly Color s_SelectedNodeColor = Color.yellow;
 
-    private readonly Dictionary<string, NodeTypeLegend> m_LegendForType = new Dictionary<string, NodeTypeLegend>();
+    readonly Dictionary<string, NodeTypeLegend> m_LegendForType = new Dictionary<string, NodeTypeLegend>();
 
-    private Node m_SelectedNode;
+    Node m_SelectedNode;
 
-    private Texture2D m_ColorBar;
+    Texture2D m_ColorBar;
     Vector2 m_ScrollPos;
 
     private struct NodeTypeLegend
@@ -45,9 +52,9 @@ public class DefaultGraphRenderer : IGraphRenderer
         public string label;
     }
 
-    public DefaultGraphRenderer()
+    public GraphViewRenderer()
     {
-        InitializeStyles();
+        //InitializeStyles();
     }
 
     public void Reset()
@@ -57,50 +64,47 @@ public class DefaultGraphRenderer : IGraphRenderer
 
     public void Draw(IGraphLayout graphLayout, Rect drawingArea)
     {
-        GraphSettings defaults;
-        defaults.maximumNormalizedNodeSize = s_DefaultMaximumNormalizedNodeSize;
-        defaults.maximumNodeSizeInPixels = s_DefaultMaximumNodeSizeInPixels;
-        defaults.aspectRatio = s_DefaultAspectRatio;
-        defaults.showLegend = true;
-        defaults.customData = null;
-        Draw(graphLayout, drawingArea, defaults);
+        throw new NotImplementedException("Must use Draw() with GraphSettings because a graph view is required");
     }
 
     public void Draw(IGraphLayout graphLayout, Rect totalDrawingArea, GraphSettings graphSettings)
     {
+        if (graphSettings.customData == null)
+            return;
+
         var legendArea = new Rect();
         var drawingArea = new Rect(totalDrawingArea);
 
-        if (graphSettings.showLegend)
-        {
-            PrepareLegend(graphLayout.vertices);
+        //if (graphSettings.showLegend)
+        //{
+        //    PrepareLegend(graphLayout.vertices);
 
-            legendArea = new Rect(totalDrawingArea)
-            {
-                width = EstimateLegendWidth() + s_BorderSize * 2
-            };
+        //    legendArea = new Rect(totalDrawingArea)
+        //    {
+        //        width = EstimateLegendWidth() + s_BorderSize * 2
+        //    };
 
-            legendArea.x = drawingArea.xMax - legendArea.width;
-            drawingArea.width -= legendArea.width;// + s_BorderSize;
+        //    legendArea.x = drawingArea.xMax - legendArea.width;
+        //    drawingArea.width -= legendArea.width;// + s_BorderSize;
 
-            DrawLegend(legendArea);
-        }
+        //    DrawLegend(legendArea);
+        //}
 
-        if (m_SelectedNode != null)
-        {
-            Event currentEvent = Event.current;
-            if (currentEvent.type == EventType.MouseUp && currentEvent.button == 0)
-            {
-                Vector2 mousePos = currentEvent.mousePosition;
-                if (drawingArea.Contains(mousePos))
-                {
-                    m_SelectedNode = null;
+        //if (m_SelectedNode != null)
+        //{
+        //    Event currentEvent = Event.current;
+        //    if (currentEvent.type == EventType.MouseUp && currentEvent.button == 0)
+        //    {
+        //        Vector2 mousePos = currentEvent.mousePosition;
+        //        if (drawingArea.Contains(mousePos))
+        //        {
+        //            m_SelectedNode = null;
 
-                    if (nodeClicked != null)
-                        nodeClicked(m_SelectedNode);
-                }
-            }
-        }
+        //            if (nodeClicked != null)
+        //                nodeClicked(m_SelectedNode);
+        //        }
+        //    }
+        //}
 
         DrawGraph(graphLayout, drawingArea, graphSettings);
     }
@@ -299,14 +303,39 @@ public class DefaultGraphRenderer : IGraphRenderer
         GUI.DrawTexture(GUILayoutUtility.GetRect(width, colorbarHeight), m_ColorBar);
     }
 
-    // Draw the graph and returns the selected Node if there's any.
-    private void DrawGraph(IGraphLayout graphLayout, Rect drawingArea, GraphSettings graphSettings)
+    void OnNodeMouseDown(MouseDownEvent evt, Tuple<GraphViewNode, Node> nodeBundle)
     {
-        // add border, except on right-hand side where the legend will provide necessary padding
-        drawingArea = new Rect(drawingArea.x + s_BorderSize,
-            drawingArea.y + s_BorderSize,
-            drawingArea.width - s_BorderSize * 2,
-            drawingArea.height - s_BorderSize * 2);
+        Debug.Log("OnMouseDown @ " + evt.target);
+        var rect = nodeBundle.Item1.GetPosition();
+        if (rect.Contains(evt.mousePosition))
+        {
+            var layoutNode = nodeBundle.Item2;
+            if (m_SelectedNode == null || !m_SelectedNode.content.Equals(layoutNode.content))
+            {
+                m_SelectedNode = layoutNode;
+
+                if (nodeClicked != null)
+                    nodeClicked(m_SelectedNode);
+            }
+        }
+    }
+
+    void OnGraphViewMouseUp(MouseUpEvent evt)
+    {
+        if (evt.button == 0)
+        {
+            m_SelectedNode = null;
+            
+            if (nodeClicked != null)
+                nodeClicked(m_SelectedNode);
+        }
+    }
+
+    // Draw the graph and returns the selected Node if there's any.
+    void DrawGraph(IGraphLayout graphLayout, Rect drawingArea, GraphSettings graphSettings)
+    {
+        var graphView = (GraphView)graphSettings.customData;
+        graphView.RegisterCallback<MouseUpEvent>(OnGraphViewMouseUp);
 
         var b = new Bounds(Vector3.zero, Vector3.zero);
         foreach (Vertex v in graphLayout.vertices)
@@ -320,81 +349,132 @@ public class DefaultGraphRenderer : IGraphRenderer
         var scale = new Vector2(drawingArea.width / b.size.x, drawingArea.height / b.size.y);
         var offset = new Vector2(-b.min.x, -b.min.y);
 
+
         Vector2 nodeSize = ComputeNodeSize(scale, graphSettings);
 
-        GUI.BeginGroup(drawingArea);
+        //GUI.BeginGroup(drawingArea);
 
-        foreach (var e in graphLayout.edges)
-        {
-            Vector2 v0 = ScaleVertex(e.source.position, offset, scale);
-            Vector2 v1 = ScaleVertex(e.destination.position, offset, scale);
-            Node node = e.source.node;
+        // NOTE: Clear doesn't currently do what you expect, you have to remove the GraphView elements manually
+        graphView.graphElements.ForEach(graphView.RemoveElement);
 
-            if (graphLayout.leftToRight)
-                DrawEdge(v1, v0, node.weight);
-            else
-                DrawEdge(v0, v1, node.weight);
-        }
+        //Event currentEvent = Event.current;
 
-        Event currentEvent = Event.current;
+        //bool oldSelectionFound = false;
+        //Node newSelectedNode = null;
 
-        bool oldSelectionFound = false;
-        Node newSelectedNode = null;
+        var nodeLookup = new Dictionary<Vertex, GraphViewNode>();
 
         foreach (Vertex v in graphLayout.vertices)
         {
             Vector2 nodeCenter = ScaleVertex(v.position, offset, scale) - nodeSize / 2;
             var nodeRect = new Rect(nodeCenter.x, nodeCenter.y, nodeSize.x, nodeSize.y);
 
-            bool clicked = false;
-            if (currentEvent.type == EventType.MouseUp && currentEvent.button == 0)
-            {
-                Vector2 mousePos = currentEvent.mousePosition;
-                if (nodeRect.Contains(mousePos))
-                {
-                    clicked = true;
-                    currentEvent.Use();
-                }
-            }
+            var layoutNode = v.node;
+            var node = new GraphViewNode();
+            node.title = layoutNode.GetContentTypeName();
+            node.SetPosition(nodeRect);
+            node.RegisterCallback<MouseDownEvent, Tuple<GraphViewNode, Node>>(OnNodeMouseDown, Tuple.Create(node, layoutNode));
+            nodeLookup[v] = node;
+            //node.Dirty(ChangeType.All);
 
-            bool currentSelection = (m_SelectedNode != null)
-                && v.node.content.Equals(m_SelectedNode.content); // Make sure to use Equals() and not == to call any overriden comparison operator in the content type.
+            graphView.AddElement(node);
 
-            DrawNode(nodeRect, v.node, currentSelection || clicked);
 
-            if (currentSelection)
-            {
-                // Previous selection still there.
-                oldSelectionFound = true;
-            }
-            else if (clicked)
-            {
-                // Just Selected a new node.
-                newSelectedNode = v.node;
-            }
+            //    bool clicked = false;
+            //    if (currentEvent.type == EventType.MouseUp && currentEvent.button == 0)
+            //    {
+            //        Vector2 mousePos = currentEvent.mousePosition;
+            //        if (nodeRect.Contains(mousePos))
+            //        {
+            //            clicked = true;
+            //            currentEvent.Use();
+            //        }
+            //    }
+
+            //    bool currentSelection = (m_SelectedNode != null)
+            //        && v.node.content.Equals(m_SelectedNode.content); // Make sure to use Equals() and not == to call any overriden comparison operator in the content type.
+
+            //    DrawNode(nodeRect, v.node, currentSelection || clicked);
+
+            //    if (currentSelection)
+            //    {
+            //        // Previous selection still there.
+            //        oldSelectionFound = true;
+            //    }
+            //    else if (clicked)
+            //    {
+            //        // Just Selected a new node.
+            //        newSelectedNode = v.node;
+            //    }
         }
 
-        if (newSelectedNode != null)
+        var leftToRight = graphLayout.leftToRight; // AE: this seems to be flipped in concept
+        foreach (var e in graphLayout.edges)
         {
-            m_SelectedNode = newSelectedNode;
+            //Vector2 v0 = ScaleVertex(e.source.position, offset, scale);
+            //Vector2 v1 = ScaleVertex(e.destination.position, offset, scale);
+            var sourceLayoutNode = leftToRight ? e.destination : e.source;
+            var destLayoutNode = leftToRight ? e.source : e.destination;
 
-            if (nodeClicked != null)
-                nodeClicked(m_SelectedNode);
-        }
-        else if (!oldSelectionFound)
-        {
-            m_SelectedNode = null;
+            var sourceNode = nodeLookup[sourceLayoutNode];
+            var destNode = nodeLookup[destLayoutNode];
+
+            var sourcePort = (Port)sourceNode.outputContainer.FirstOrDefault();
+            if (sourcePort == null)
+            {
+                sourcePort = sourceNode.InstantiatePort(Orientation.Horizontal, Direction.Output, typeof(Node));
+                sourcePort.portName = "Out";
+                sourceNode.outputContainer.Add(sourcePort);
+            }
+            var destPort = (Port)destNode.inputContainer.FirstOrDefault();
+            if (destPort == null)
+            {
+                destPort = destNode.InstantiatePort(Orientation.Horizontal, Direction.Input, typeof(Node));
+                destPort.portName = "In";
+                destNode.inputContainer.Add(destPort);
+            }
+
+            var edge = new GraphViewEdge();
+            //edge.clippingOptions = VisualElement.ClippingOptions.NoClipping;
+            edge.input = leftToRight ? destPort : sourcePort;
+            edge.output = leftToRight ? sourcePort : destPort;
+            sourcePort.Connect(edge);
+            destPort.Connect(edge);
+            graphView.AddElement(edge);
+
+            //sourceNode.Dirty(ChangeType.All);
+            //destNode.Dirty(ChangeType.All);
+
+            //if (graphLayout.leftToRight)
+            //    DrawEdge(v1, v0, layoutNode.weight);
+            //else
+            //    DrawEdge(v0, v1, layoutNode.weight);
         }
 
-        GUI.EndGroup();
+
+        //m_GraphView.Dirty(ChangeType.All);
+
+        //if (newSelectedNode != null)
+        //{
+        //    m_SelectedNode = newSelectedNode;
+
+        //    if (nodeClicked != null)
+        //        nodeClicked(m_SelectedNode);
+        //}
+        //else if (!oldSelectionFound)
+        //{
+        //    m_SelectedNode = null;
+        //}
+
+        //GUI.EndGroup();
     }
 
     // Apply node constraints to node size
     private static Vector2 ComputeNodeSize(Vector2 scale, GraphSettings graphSettings)
     {
-        var extraTickness = (s_SelectedNodeThickness + s_ActiveNodeThickness) * 2.0f;
-        var nodeSize = new Vector2(graphSettings.maximumNormalizedNodeSize * scale.x - extraTickness,
-            graphSettings.maximumNormalizedNodeSize * scale.y - extraTickness);
+        var extraThickness = (s_SelectedNodeThickness + s_ActiveNodeThickness) * 2.0f;
+        var nodeSize = new Vector2(graphSettings.maximumNormalizedNodeSize * scale.x - extraThickness,
+            graphSettings.maximumNormalizedNodeSize * scale.y - extraThickness);
 
         // Adjust aspect ratio after scaling
         float currentAspectRatio = nodeSize.x / nodeSize.y;
@@ -483,3 +563,4 @@ public class DefaultGraphRenderer : IGraphRenderer
             Color.Lerp(s_EdgeColorMin, s_EdgeColorMax, weight), null, 5f);
     }
 }
+#endif
