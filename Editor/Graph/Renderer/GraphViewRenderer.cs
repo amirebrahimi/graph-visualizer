@@ -1,21 +1,32 @@
 #if UNITY_2018_1_OR_NEWER
-using UnityEngine;
-using UnityEditor;
-using System.Collections.Generic;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using GraphVisualizer;
+using UnityEditor;
 using UnityEditor.Experimental.UIElements.GraphView;
+using UnityEngine;
 using UnityEngine.Experimental.UIElements;
-using UnityEngine.Playables;
-using Edge = GraphVisualizer.Edge;
-using Node = GraphVisualizer.Node;
+using UnityEngine.Experimental.UIElements.StyleSheets;
 using GraphViewNode = UnityEditor.Experimental.UIElements.GraphView.Node;
 using GraphViewEdge = UnityEditor.Experimental.UIElements.GraphView.Edge;
+using Node = GraphVisualizer.Node;
 
 public class GraphViewRenderer : IGraphRenderer
 {
+    class CustomEdge : GraphViewEdge
+    {
+        public StyleValue<Color> edgeColor { get; set; }
+
+        protected override void DrawEdge()
+        {
+            base.DrawEdge();
+            edgeControl.inputColor = edgeColor;
+            edgeControl.outputColor = edgeColor;
+        }
+    }
+
     public event Action<Node> nodeClicked;
     static readonly Color s_EdgeColorMin = new Color(1.0f, 1.0f, 1.0f, 0.1f);
     static readonly Color s_EdgeColorMax = Color.white;
@@ -75,9 +86,10 @@ public class GraphViewRenderer : IGraphRenderer
         var legendArea = new Rect();
         var drawingArea = new Rect(totalDrawingArea);
 
+        PrepareLegend(graphLayout.vertices);
+
         //if (graphSettings.showLegend)
         //{
-        //    PrepareLegend(graphLayout.vertices);
 
         //    legendArea = new Rect(totalDrawingArea)
         //    {
@@ -303,31 +315,32 @@ public class GraphViewRenderer : IGraphRenderer
         GUI.DrawTexture(GUILayoutUtility.GetRect(width, colorbarHeight), m_ColorBar);
     }
 
-    void OnNodeMouseDown(MouseDownEvent evt, Tuple<GraphViewNode, Node> nodeBundle)
-    {
-        Debug.Log("OnMouseDown @ " + evt.target);
-        var rect = nodeBundle.Item1.GetPosition();
-        if (rect.Contains(evt.mousePosition))
-        {
-            var layoutNode = nodeBundle.Item2;
-            if (m_SelectedNode == null || !m_SelectedNode.content.Equals(layoutNode.content))
-            {
-                m_SelectedNode = layoutNode;
-
-                if (nodeClicked != null)
-                    nodeClicked(m_SelectedNode);
-            }
-        }
-    }
-
-    void OnGraphViewMouseUp(MouseUpEvent evt)
+    void OnGraphViewMouseUp(MouseUpEvent evt, GraphView graphView)
     {
         if (evt.button == 0)
         {
-            m_SelectedNode = null;
-            
-            if (nodeClicked != null)
+            var selection = graphView.selection;
+
+            Node selectedNode = null;
+            foreach (var s in selection)
+            {
+                var gvNode = (GraphViewNode)s;
+                var rect = gvNode.GetPosition();
+                if (rect.Contains(evt.localMousePosition))
+                {
+                    var node = (Node)gvNode.userData;
+                    if (m_SelectedNode == null || !m_SelectedNode.content.Equals(node.content))
+                        selectedNode = node;
+                }
+            }
+
+            var selectionChanged = m_SelectedNode != selectedNode;
+            m_SelectedNode = selectedNode;
+
+            if (nodeClicked != null && selectionChanged)
                 nodeClicked(m_SelectedNode);
+
+            graphView.ClearSelection();
         }
     }
 
@@ -335,7 +348,7 @@ public class GraphViewRenderer : IGraphRenderer
     void DrawGraph(IGraphLayout graphLayout, Rect drawingArea, GraphSettings graphSettings)
     {
         var graphView = (GraphView)graphSettings.customData;
-        graphView.RegisterCallback<MouseUpEvent>(OnGraphViewMouseUp);
+        graphView.RegisterCallback<MouseUpEvent, GraphView>(OnGraphViewMouseUp, graphView);
 
         var b = new Bounds(Vector3.zero, Vector3.zero);
         foreach (Vertex v in graphLayout.vertices)
@@ -352,15 +365,8 @@ public class GraphViewRenderer : IGraphRenderer
 
         Vector2 nodeSize = ComputeNodeSize(scale, graphSettings);
 
-        //GUI.BeginGroup(drawingArea);
-
         // NOTE: Clear doesn't currently do what you expect, you have to remove the GraphView elements manually
         graphView.graphElements.ForEach(graphView.RemoveElement);
-
-        //Event currentEvent = Event.current;
-
-        //bool oldSelectionFound = false;
-        //Node newSelectedNode = null;
 
         var nodeLookup = new Dictionary<Vertex, GraphViewNode>();
 
@@ -369,43 +375,19 @@ public class GraphViewRenderer : IGraphRenderer
             Vector2 nodeCenter = ScaleVertex(v.position, offset, scale) - nodeSize / 2;
             var nodeRect = new Rect(nodeCenter.x, nodeCenter.y, nodeSize.x, nodeSize.y);
 
-            var layoutNode = v.node;
-            var node = new GraphViewNode();
-            node.title = layoutNode.GetContentTypeName();
-            node.SetPosition(nodeRect);
-            node.RegisterCallback<MouseDownEvent, Tuple<GraphViewNode, Node>>(OnNodeMouseDown, Tuple.Create(node, layoutNode));
-            nodeLookup[v] = node;
+            var node = v.node;
+
+            var gvNode = new GraphViewNode();
+            gvNode.userData = node;
+            nodeLookup[v] = gvNode;
             //node.Dirty(ChangeType.All);
 
-            graphView.AddElement(node);
+            graphView.AddElement(gvNode);
 
+            bool currentSelection = (m_SelectedNode != null)
+                && v.node.content.Equals(m_SelectedNode.content); // Make sure to use Equals() and not == to call any overriden comparison operator in the content type.
 
-            //    bool clicked = false;
-            //    if (currentEvent.type == EventType.MouseUp && currentEvent.button == 0)
-            //    {
-            //        Vector2 mousePos = currentEvent.mousePosition;
-            //        if (nodeRect.Contains(mousePos))
-            //        {
-            //            clicked = true;
-            //            currentEvent.Use();
-            //        }
-            //    }
-
-            //    bool currentSelection = (m_SelectedNode != null)
-            //        && v.node.content.Equals(m_SelectedNode.content); // Make sure to use Equals() and not == to call any overriden comparison operator in the content type.
-
-            //    DrawNode(nodeRect, v.node, currentSelection || clicked);
-
-            //    if (currentSelection)
-            //    {
-            //        // Previous selection still there.
-            //        oldSelectionFound = true;
-            //    }
-            //    else if (clicked)
-            //    {
-            //        // Just Selected a new node.
-            //        newSelectedNode = v.node;
-            //    }
+            DrawNode(gvNode, nodeRect, node, currentSelection);
         }
 
         var leftToRight = graphLayout.leftToRight; // AE: this seems to be flipped in concept
@@ -423,6 +405,10 @@ public class GraphViewRenderer : IGraphRenderer
             if (sourcePort == null)
             {
                 sourcePort = sourceNode.InstantiatePort(Orientation.Horizontal, Direction.Output, typeof(Node));
+                // TODO: Retry this with 2018.2
+//                var color = sourcePort.portColor;
+//                color.a = sourceLayoutNode.node.weight;
+//                sourcePort.color = color;
                 sourcePort.portName = "Out";
                 sourceNode.outputContainer.Add(sourcePort);
             }
@@ -430,11 +416,16 @@ public class GraphViewRenderer : IGraphRenderer
             if (destPort == null)
             {
                 destPort = destNode.InstantiatePort(Orientation.Horizontal, Direction.Input, typeof(Node));
+                // TODO: Retry this with 2018.2
+//                var color = destPort.portColor;
+//                color.a = destLayoutNode.node.weight;
+//                destPort.portColor = color;
                 destPort.portName = "In";
                 destNode.inputContainer.Add(destPort);
             }
 
-            var edge = new GraphViewEdge();
+            var edge = new CustomEdge();
+            edge.edgeColor = Color.Lerp(s_EdgeColorMin, s_EdgeColorMax, e.source.node.weight);
             //edge.clippingOptions = VisualElement.ClippingOptions.NoClipping;
             edge.input = leftToRight ? destPort : sourcePort;
             edge.output = leftToRight ? sourcePort : destPort;
@@ -450,23 +441,6 @@ public class GraphViewRenderer : IGraphRenderer
             //else
             //    DrawEdge(v0, v1, layoutNode.weight);
         }
-
-
-        //m_GraphView.Dirty(ChangeType.All);
-
-        //if (newSelectedNode != null)
-        //{
-        //    m_SelectedNode = newSelectedNode;
-
-        //    if (nodeClicked != null)
-        //        nodeClicked(m_SelectedNode);
-        //}
-        //else if (!oldSelectionFound)
-        //{
-        //    m_SelectedNode = null;
-        //}
-
-        //GUI.EndGroup();
     }
 
     // Apply node constraints to node size
@@ -529,14 +503,29 @@ public class GraphViewRenderer : IGraphRenderer
         return new Vector2((v.x + offset.x) * scaleFactor.x, (v.y + offset.y) * scaleFactor.y);
     }
 
-    // Draw a node an return true if it has been clicked
-    private void DrawNode(Rect nodeRect, Node node, bool selected)
+    void DrawNode(GraphViewNode gvNode, Rect nodeRect, Node node, bool selected)
     {
+        var style = gvNode.mainContainer.style;
         string nodeType = node.GetContentTypeName();
-        NodeTypeLegend nodeTypeLegend = m_LegendForType[nodeType];
-        string formattedLabel = Regex.Replace(nodeTypeLegend.label, "((?<![A-Z])\\B[A-Z])", "\n$1"); // Split into multi-lines
+        string formattedLabel = nodeType;
+        NodeTypeLegend nodeTypeLegend;
+        if (m_LegendForType.TryGetValue(nodeType, out nodeTypeLegend))
+        {
+            formattedLabel = Regex.Replace(nodeTypeLegend.label, "((?<![A-Z])\\B[A-Z])", "\n$1"); // Split into multi-lines
+            style.backgroundColor = nodeTypeLegend.color;
+        }
 
-        DrawRect(nodeRect, nodeTypeLegend.color, formattedLabel, node.active, selected);
+        gvNode.title = formattedLabel;
+        gvNode.SetPosition(nodeRect);
+
+        if (selected)
+        {
+            style.borderColor = s_SelectedNodeColor;
+        }
+        else if (node.active)
+        {
+            style.borderColor = s_ActiveNodeColor;
+        }
     }
 
     // Compute the tangents for the graphLayout edges. Assumes that graphLayout is drawn from left to right
