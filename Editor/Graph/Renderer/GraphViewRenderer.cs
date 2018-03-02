@@ -377,6 +377,7 @@ public class GraphViewRenderer : IGraphRenderer
 
             var node = v.node;
 
+            // TODO: When TokenNode becomes available, switch to it for portless edge connections
             var gvNode = new GraphViewNode();
             gvNode.userData = node;
             nodeLookup[v] = gvNode;
