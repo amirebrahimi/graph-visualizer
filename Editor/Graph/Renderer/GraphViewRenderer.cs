@@ -325,8 +325,8 @@ public class GraphViewRenderer : IGraphRenderer
             foreach (var s in selection)
             {
                 var gvNode = (GraphViewNode)s;
-                var rect = gvNode.GetPosition();
-                if (rect.Contains(evt.localMousePosition))
+                var mappedPoint = graphView.ChangeCoordinatesTo(gvNode, evt.localMousePosition);
+                if (gvNode.ContainsPoint(mappedPoint))
                 {
                     var node = (Node)gvNode.userData;
                     if (m_SelectedNode == null || !m_SelectedNode.content.Equals(node.content))
