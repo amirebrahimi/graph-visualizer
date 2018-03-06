@@ -1,13 +1,39 @@
-using UnityEngine;
-using UnityEditor;
+#if UNITY_2018_1_OR_NEWER
+#define USE_GRAPHVIEW
+#endif
+using System;
 using System.Collections.Generic;
-using System.Linq;
 using GraphVisualizer;
+using UnityEditor;
+#if USE_GRAPHVIEW
+using UnityEditor.Experimental.UIElements;
+using UnityEditor.Experimental.UIElements.GraphView;
+#endif
+using UnityEngine;
+#if USE_GRAPHVIEW
+using UnityEngine.Experimental.UIElements;
+#endif
 using UnityEngine.Playables;
-using UnityEditor.Animations;
+
 
 public class PlayableGraphVisualizerWindow : EditorWindow, IHasCustomMenu
 {
+#if USE_GRAPHVIEW
+    class PlayableGraphView : GraphView
+    {
+        public PlayableGraphView ()
+        {
+            SetupZoom(ContentZoomer.DefaultMinScale, ContentZoomer.DefaultMaxScale);
+            this.AddManipulator(new ContentDragger());
+            this.AddManipulator(new SelectionDragger());
+            //this.AddManipulator(new RectangleSelector());
+            //this.AddManipulator(new FreehandSelector());
+
+            //Insert(0, new GridBackground());
+        }
+    }
+#endif
+
     private struct PlayableGraphInfo
     {
         public PlayableGraph graph;
@@ -17,9 +43,16 @@ public class PlayableGraphVisualizerWindow : EditorWindow, IHasCustomMenu
     private IGraphRenderer m_Renderer;
     private IGraphLayout m_Layout;
 
+#if USE_GRAPHVIEW
+    GraphView m_GraphView;
+    IMGUIContainer m_GraphOnGUI;
+#endif
+
+    IList<PlayableGraphInfo> m_GraphInfos = new List<PlayableGraphInfo>();
     private PlayableGraphInfo m_CurrentGraphInfo;
     private GraphSettings m_GraphSettings;
     private bool m_AutoScanScene = true;
+    PlayableGraphVisualizer m_Visualizer;
 
     #region Configuration
 
@@ -42,6 +75,18 @@ public class PlayableGraphVisualizerWindow : EditorWindow, IHasCustomMenu
     public static void ShowWindow()
     {
         GetWindow<PlayableGraphVisualizerWindow>("Playable Graph Visualizer");
+    }
+
+    void OnEnable()
+    {
+#if USE_GRAPHVIEW
+        var root = this.GetRootVisualContainer();
+
+        m_GraphOnGUI = new IMGUIContainer(GraphOnGUI);
+        m_GraphOnGUI.StretchToParentSize();
+        m_GraphOnGUI.name = "Graph";
+        root.Add(m_GraphOnGUI);
+#endif
     }
 
     private PlayableGraphInfo GetSelectedGraphInToolBar(IList<PlayableGraphInfo> graphs, PlayableGraphInfo currentGraph)
@@ -67,8 +112,12 @@ public class PlayableGraphVisualizerWindow : EditorWindow, IHasCustomMenu
         return selectedDirector;
     }
 
-    private static void ShowMessage(string msg)
+    void ShowMessage(string msg)
     {
+#if USE_GRAPHVIEW
+        GUILayout.BeginArea(this.GetRootVisualContainer().contentRect);
+#endif
+
         GUILayout.BeginVertical();
         GUILayout.FlexibleSpace();
 
@@ -82,13 +131,21 @@ public class PlayableGraphVisualizerWindow : EditorWindow, IHasCustomMenu
 
         GUILayout.FlexibleSpace();
         GUILayout.EndVertical();
+#if USE_GRAPHVIEW
+        GUILayout.EndArea();
+#endif
     }
 
     void Update()
     {
+#if USE_GRAPHVIEW
+        EnumerateGraphs();
+        DrawGraph();
+#else
         // If in Play mode, refresh the graph each update.
         if (EditorApplication.isPlaying)
             Repaint();
+#endif
     }
 
     void OnInspectorUpdate()
@@ -98,10 +155,18 @@ public class PlayableGraphVisualizerWindow : EditorWindow, IHasCustomMenu
             Repaint();
     }
 
+#if !USE_GRAPHVIEW
     void OnGUI()
     {
-        // Create a list of all the playable graphs extracted.
-        IList<PlayableGraphInfo> graphInfos = new List<PlayableGraphInfo>();
+        EnumerateGraphs();
+        GraphOnGUI();
+        DrawGraph();
+    }
+#endif
+
+    void EnumerateGraphs()
+    {
+        m_GraphInfos.Clear();
 
         PlayableGraphInfo info;
 
@@ -115,11 +180,12 @@ public class PlayableGraphVisualizerWindow : EditorWindow, IHasCustomMenu
             {
                 foreach (var director in directors)
                 {
-                    if (director.playableGraph.IsValid())
+                    var graph = director.playableGraph;
+                    if (graph.IsValid() && graph.GetPlayableCount() > 0)
                     {
                         info.name = director.name;
-                        info.graph = director.playableGraph;
-                        graphInfos.Add(info);
+                        info.graph = graph;
+                        m_GraphInfos.Add(info);
                     }
                 }
             }
@@ -129,11 +195,12 @@ public class PlayableGraphVisualizerWindow : EditorWindow, IHasCustomMenu
             {
                 foreach (var animator in animators)
                 {
-                    if (animator.playableGraph.IsValid())
+                    var graph = animator.playableGraph;
+                    if (graph.IsValid() && graph.GetPlayableCount() > 0)
                     {
                         info.name = animator.name;
-                        info.graph = animator.playableGraph;
-                        graphInfos.Add(info);
+                        info.graph = graph;
+                        m_GraphInfos.Add(info);
                     }
                 }
             }
@@ -143,24 +210,98 @@ public class PlayableGraphVisualizerWindow : EditorWindow, IHasCustomMenu
         {
             foreach (var clientGraph in GraphVisualizerClient.GetGraphs())
             {
-                if (clientGraph.Key.IsValid())
+                var graph = clientGraph.Key;
+                if (graph.IsValid() && graph.GetPlayableCount() > 0)
                 {
                     info.name = clientGraph.Value;
-                    info.graph = clientGraph.Key;
-                    graphInfos.Add(info);
+                    info.graph = graph;
+                    m_GraphInfos.Add(info);
                 }
             }
         }
+    }
 
+    void DrawGraph()
+    {
+        if (m_Visualizer == null)
+            return;
+
+        m_Visualizer.Refresh();
+
+#if USE_GRAPHVIEW
+        var root = this.GetRootVisualContainer();
+
+        if (m_Visualizer.IsEmpty())
+        {
+            if (m_GraphView != null)
+            {
+                root.Remove(m_GraphView);
+                m_GraphView = null;
+
+                while (root.childCount != 1)
+                {
+                    foreach (var child in root.Children())
+                    {
+                        if (child != m_GraphOnGUI)
+                        {
+                            root.Remove(child);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            return;
+        }
+
+        if (m_GraphView == null)
+        {
+            m_GraphView = new PlayableGraphView();
+            m_GraphSettings.customData = m_GraphView;
+
+            root.Add(m_GraphView);
+        }
+#endif
+
+        if (m_Layout == null)
+            m_Layout = new ReingoldTilford();
+
+        m_Layout.CalculateLayout(m_Visualizer);
+
+        var graphRect = new Rect(0, s_ToolbarHeight, position.width, position.height - s_ToolbarHeight);
+
+        if (m_Renderer == null)
+        {
+#if USE_GRAPHVIEW
+            m_Renderer = new GraphViewRenderer();
+#else
+            m_Renderer = new DefaultGraphRenderer();
+#endif
+        }
+
+#if USE_GRAPHVIEW
+        m_GraphView.layout = graphRect;
+        m_Renderer.Draw(m_Layout, graphRect, m_GraphSettings);
+#else
+        m_Renderer.Draw(m_Layout, graphRect, m_GraphSettings);
+#endif
+
+    }
+
+    void GraphOnGUI()
+    {
         // Early out if there is no graphs.
-        if (graphInfos.Count == 0)
+        if (m_GraphInfos.Count == 0)
         {
             ShowMessage("No PlayableGraph in the scene");
             return;
         }
 
         GUILayout.BeginVertical();
-        m_CurrentGraphInfo = GetSelectedGraphInToolBar(graphInfos, m_CurrentGraphInfo);
+        EditorGUI.BeginChangeCheck();
+        m_CurrentGraphInfo = GetSelectedGraphInToolBar(m_GraphInfos, m_CurrentGraphInfo);
+        if (EditorGUI.EndChangeCheck() || m_Visualizer == null)
+            m_Visualizer = new PlayableGraphVisualizer(m_CurrentGraphInfo.graph);
         GUILayout.EndVertical();
 
         if (!m_CurrentGraphInfo.graph.IsValid())
@@ -169,26 +310,11 @@ public class PlayableGraphVisualizerWindow : EditorWindow, IHasCustomMenu
             return;
         }
 
-        var graph = new PlayableGraphVisualizer(m_CurrentGraphInfo.graph);
-        graph.Refresh();
-
-        if (graph.IsEmpty())
+        if (m_Visualizer.IsEmpty())
         {
             ShowMessage("Selected PlayableGraph is empty");
             return;
         }
-
-        if (m_Layout == null)
-            m_Layout = new ReingoldTilford();
-
-        m_Layout.CalculateLayout(graph);
-
-        var graphRect = new Rect(0, s_ToolbarHeight, position.width, position.height - s_ToolbarHeight);
-
-        if (m_Renderer == null)
-            m_Renderer = new DefaultGraphRenderer();
-
-        m_Renderer.Draw(m_Layout, graphRect, m_GraphSettings);
     }
 
 #region Custom_Menu
