@@ -15,18 +15,6 @@ using Node = GraphVisualizer.Node;
 
 public class GraphViewRenderer : IGraphRenderer
 {
-    class CustomEdge : GraphViewEdge
-    {
-        public StyleValue<Color> edgeColor { get; set; }
-
-        protected override void DrawEdge()
-        {
-            base.DrawEdge();
-            edgeControl.inputColor = edgeColor;
-            edgeControl.outputColor = edgeColor;
-        }
-    }
-
     public event Action<Node> nodeClicked;
     static readonly Color k_EdgeColorMin = new Color(1.0f, 1.0f, 1.0f, 0.1f);
     static readonly Color k_EdgeColorMax = Color.white;
@@ -400,7 +388,7 @@ public class GraphViewRenderer : IGraphRenderer
 
             var node = v.node;
 
-            // TODO: When TokenNode becomes available, switch to it for portless edge connections
+            // TODO: Replace w/ TokenNode or the super collapsed node from the VFX editor
             var gvNode = new GraphViewNode();
             gvNode.userData = node;
             nodeLookup[v] = gvNode;
@@ -422,31 +410,29 @@ public class GraphViewRenderer : IGraphRenderer
             var sourceNode = nodeLookup[sourceLayoutNode];
             var destNode = nodeLookup[destLayoutNode];
 
+            var edgeWeight = e.source.node.weight;
             var sourcePort = (Port)sourceNode.outputContainer.FirstOrDefault();
             if (sourcePort == null)
             {
-                sourcePort = sourceNode.InstantiatePort(Orientation.Horizontal, Direction.Output, typeof(Node));
-                // TODO: Retry this with 2018.2
-//                var color = sourcePort.portColor;
-//                color.a = sourceLayoutNode.node.weight;
-//                sourcePort.color = color;
+                sourcePort = sourceNode.InstantiatePort(Orientation.Horizontal, Direction.Output, Port.Capacity.Multi, typeof(Node));
+                var color = sourcePort.portColor;
+                color.a = edgeWeight;
+                sourcePort.portColor = color;
                 sourcePort.portName = "Out";
                 sourceNode.outputContainer.Add(sourcePort);
             }
             var destPort = (Port)destNode.inputContainer.FirstOrDefault();
             if (destPort == null)
             {
-                destPort = destNode.InstantiatePort(Orientation.Horizontal, Direction.Input, typeof(Node));
-                // TODO: Retry this with 2018.2
-//                var color = destPort.portColor;
-//                color.a = destLayoutNode.node.weight;
-//                destPort.portColor = color;
+                destPort = destNode.InstantiatePort(Orientation.Horizontal, Direction.Input, Port.Capacity.Multi, typeof(Node));
+                var color = destPort.portColor;
+                color.a = edgeWeight;
+                destPort.portColor = color;
                 destPort.portName = "In";
                 destNode.inputContainer.Add(destPort);
             }
 
-            var edge = new CustomEdge();
-            edge.edgeColor = Color.Lerp(k_EdgeColorMin, k_EdgeColorMax, e.source.node.weight);
+            var edge = new GraphViewEdge();
             edge.input = leftToRight ? destPort : sourcePort;
             edge.output = leftToRight ? sourcePort : destPort;
             sourcePort.Connect(edge);
