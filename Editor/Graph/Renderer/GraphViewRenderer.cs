@@ -306,12 +306,12 @@ public class GraphViewRenderer : IGraphRenderer
         GUI.DrawTexture(GUILayoutUtility.GetRect(width, colorbarHeight), m_ColorBar);
     }
 
-    void OnGraphViewMouseUp(MouseUpEvent evt, GraphView graphView)
+    void UpdateSelection(GraphView graphView)
     {
-        if (evt.button == 0)
-        {
-            var selection = graphView.selection;
+        var selection = graphView.selection;
 
+        if (selection.Count > 0)
+        {
             Node selectedNode = null;
             foreach (var s in selection)
             {
@@ -326,8 +326,6 @@ public class GraphViewRenderer : IGraphRenderer
 
             if (nodeClicked != null && selectionChanged)
                 nodeClicked(m_SelectedNode);
-
-            graphView.ClearSelection();
         }
     }
 
@@ -360,7 +358,7 @@ public class GraphViewRenderer : IGraphRenderer
             drawingArea.width - k_BorderSize * 2,
             drawingArea.height - k_BorderSize * 2);
 
-        graphView.RegisterCallback<MouseUpEvent, GraphView>(OnGraphViewMouseUp, graphView);
+        UpdateSelection(graphView);
 
         var b = new Bounds(Vector3.zero, Vector3.zero);
         foreach (Vertex v in graphLayout.vertices)
