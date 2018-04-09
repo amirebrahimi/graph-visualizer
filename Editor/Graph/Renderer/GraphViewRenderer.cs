@@ -22,9 +22,9 @@ public class GraphViewRenderer : IGraphRenderer
 
     static readonly float k_BorderSize = 15;
     static readonly float k_LegendFixedOverheadWidth = 100;
-    static readonly float k_DefaultMaximumNormalizedNodeSize = 0.8f;
-    static readonly float k_DefaultMaximumNodeSizeInPixels = 100.0f;
-    static readonly float k_DefaultAspectRatio = 1.5f;
+//    static readonly float k_DefaultMaximumNormalizedNodeSize = 0.8f;
+//    static readonly float k_DefaultMaximumNodeSizeInPixels = 100.0f;
+//    static readonly float k_DefaultAspectRatio = 1.5f;
 
     static readonly int s_NodeMaxFontSize = 14;
 
