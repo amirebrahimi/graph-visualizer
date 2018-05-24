@@ -479,7 +479,13 @@ public class DefaultGraphRenderer : IGraphRenderer
 
         GetTangents(a, b, out points, out tangents);
 
+        Color color;
+        if (Mathf.Approximately(weight, float.MaxValue))
+            color = Color.yellow;
+        else
+            color = Color.Lerp(s_EdgeColorMin, s_EdgeColorMax, weight);
+
         Handles.DrawBezier(points[0], points[1], tangents[0], tangents[1],
-            Color.Lerp(s_EdgeColorMin, s_EdgeColorMax, weight), null, 5f);
+            color, null, 5f);
     }
 }
