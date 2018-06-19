@@ -61,6 +61,7 @@ public class DefaultGraphRenderer : IGraphRenderer
         defaults.maximumNormalizedNodeSize = s_DefaultMaximumNormalizedNodeSize;
         defaults.maximumNodeSizeInPixels = s_DefaultMaximumNodeSizeInPixels;
         defaults.aspectRatio = s_DefaultAspectRatio;
+        defaults.showInspector = true;
         defaults.showLegend = true;
         defaults.customData = null;
         Draw(graphLayout, drawingArea, defaults);
@@ -71,7 +72,7 @@ public class DefaultGraphRenderer : IGraphRenderer
         var legendArea = new Rect();
         var drawingArea = new Rect(totalDrawingArea);
 
-        if (graphSettings.showLegend)
+        if (graphSettings.showLegend || graphSettings.showInspector)
         {
             PrepareLegend(graphLayout.vertices);
 
@@ -83,7 +84,7 @@ public class DefaultGraphRenderer : IGraphRenderer
             legendArea.x = drawingArea.xMax - legendArea.width;
             drawingArea.width -= legendArea.width;// + s_BorderSize;
 
-            DrawLegend(legendArea);
+            DrawLegend(graphSettings, legendArea);
         }
 
         if (m_SelectedNode != null)
@@ -204,7 +205,7 @@ public class DefaultGraphRenderer : IGraphRenderer
         GUI.color = originalColor;
     }
 
-    private void DrawLegend(Rect legendArea)
+    private void DrawLegend(GraphSettings graphSettings, Rect legendArea)
     {
         EditorGUI.DrawRect(legendArea, s_LegendBackground);
 
@@ -217,44 +218,50 @@ public class DefaultGraphRenderer : IGraphRenderer
         GUILayout.BeginArea(legendArea);
         GUILayout.BeginVertical();
 
-        GUILayout.Label("Inspector", m_SubTitleStyle);
-
-        if (m_SelectedNode != null)
+        if (graphSettings.showInspector)
         {
-            using (var scrollView = new EditorGUILayout.ScrollViewScope(m_ScrollPos))
+            GUILayout.Label("Inspector", m_SubTitleStyle);
+
+            if (m_SelectedNode != null)
             {
-                m_ScrollPos = scrollView.scrollPosition;
-                GUILayout.Label(m_SelectedNode.ToString(), m_InspectorStyle);
+                using (var scrollView = new EditorGUILayout.ScrollViewScope(m_ScrollPos))
+                {
+                    m_ScrollPos = scrollView.scrollPosition;
+                    GUILayout.Label(m_SelectedNode.ToString(), m_InspectorStyle);
+                }
+            }
+            else
+            {
+                GUILayout.Label("Click on a node\nto display its details.");
             }
         }
-        else
-        {
-            GUILayout.Label("Click on a node\nto display its details.");
-        }
 
         GUILayout.FlexibleSpace();
 
-        GUILayout.Label("Legend", m_SubTitleStyle);
-
-        foreach (var pair in m_LegendForType)
+        if (graphSettings.showLegend)
         {
-            DrawLegendEntry(pair.Value.color, pair.Value.label, false);
+            GUILayout.Label("Legend", m_SubTitleStyle);
+
+            foreach (var pair in m_LegendForType)
+            {
+                DrawLegendEntry(pair.Value.color, pair.Value.label, false);
+            }
+
+            DrawLegendEntry(Color.gray, "Playing", true);
+
+            GUILayout.Space(20);
+
+            GUILayout.Label("Edge weight", m_SubTitleStyle);
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("0");
+            GUILayout.FlexibleSpace();
+            GUILayout.Label("1");
+            GUILayout.EndHorizontal();
+
+            DrawEdgeWeightColorBar(legendArea.width);
+
+            GUILayout.Space(20);
         }
-
-        DrawLegendEntry(Color.gray, "Playing", true);
-
-        GUILayout.Space(20);
-
-        GUILayout.Label("Edge weight", m_SubTitleStyle);
-        GUILayout.BeginHorizontal();
-        GUILayout.Label("0");
-        GUILayout.FlexibleSpace();
-        GUILayout.Label("1");
-        GUILayout.EndHorizontal();
-
-        DrawEdgeWeightColorBar(legendArea.width);
-
-        GUILayout.Space(20);
 
         GUILayout.EndVertical();
         GUILayout.EndArea();
