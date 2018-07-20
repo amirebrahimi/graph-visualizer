@@ -72,10 +72,10 @@ public class DefaultGraphRenderer : IGraphRenderer
         var legendArea = new Rect();
         var drawingArea = new Rect(totalDrawingArea);
 
+        PrepareLegend(graphLayout.vertices);
+
         if (graphSettings.showLegend || graphSettings.showInspector)
         {
-            PrepareLegend(graphLayout.vertices);
-
             legendArea = new Rect(totalDrawingArea)
             {
                 width = EstimateLegendWidth() + s_BorderSize * 2
