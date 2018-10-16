@@ -74,7 +74,7 @@ public class DefaultGraphRenderer : IGraphRenderer
 
         PrepareLegend(graphLayout.vertices);
 
-        if (graphSettings.showLegend || graphSettings.showInspector)
+        if (graphSettings.showLegend || graphSettings.showInspector || m_SelectedNode != null)
         {
             legendArea = new Rect(totalDrawingArea)
             {
@@ -218,7 +218,7 @@ public class DefaultGraphRenderer : IGraphRenderer
         GUILayout.BeginArea(legendArea);
         GUILayout.BeginVertical();
 
-        if (graphSettings.showInspector)
+        if (graphSettings.showInspector || m_SelectedNode != null)
         {
             GUILayout.Label("Inspector", m_SubTitleStyle);
 
