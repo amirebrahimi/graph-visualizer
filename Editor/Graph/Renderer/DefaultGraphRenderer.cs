@@ -1,10 +1,9 @@
-using UnityEngine;
-using UnityEditor;
-using System.Collections.Generic;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using UnityEngine.Playables;
+using UnityEngine;
+using UnityEditor;
 
 namespace GraphVisualizer
 {
@@ -493,8 +492,7 @@ namespace GraphVisualizer
             else
                 color = Color.Lerp(s_EdgeColorMin, s_EdgeColorMax, weight);
 
-            Handles.DrawBezier(points[0], points[1], tangents[0], tangents[1],
-                color, null, 5f);
+            Handles.DrawBezier(points[0], points[1], tangents[0], tangents[1], color, null, 5f);
         }
     }
 }
