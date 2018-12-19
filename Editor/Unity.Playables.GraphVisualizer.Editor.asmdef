@@ -1,0 +1,16 @@
+{
+    "name": "Unity.Playables.GraphVisualizer.Editor",
+    "references": [
+        "Unity.Playables.GraphVisualizer"
+    ],
+    "optionalUnityReferences": [],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": []
+}
