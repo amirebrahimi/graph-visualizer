@@ -78,7 +78,7 @@ namespace GraphVisualizer
             {
                 legendArea = new Rect(totalDrawingArea)
                 {
-                    width = EstimateLegendWidth() + s_BorderSize * 2
+                    width = Mathf.Max(EstimateLegendWidth(), drawingArea.width * 0.25f) + s_BorderSize * 2
                 };
 
                 legendArea.x = drawingArea.xMax - legendArea.width;
