@@ -1,6 +1,9 @@
 using System;
 using System.Text;
 using UnityEngine.Playables;
+#if UNITY_2019_1_OR_NEWER
+using UnityEditor.Playables;
+#endif
 
 namespace GraphVisualizer
 {
