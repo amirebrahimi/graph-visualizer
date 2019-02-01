@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using UnityEngine;
 using UnityEditor;
+using UnityEngine;
 
 namespace GraphVisualizer
 {
@@ -82,7 +82,7 @@ namespace GraphVisualizer
                 };
 
                 legendArea.x = drawingArea.xMax - legendArea.width;
-                drawingArea.width -= legendArea.width;// + s_BorderSize;
+                drawingArea.width -= legendArea.width; // + s_BorderSize;
 
                 DrawLegend(graphSettings, legendArea);
             }
@@ -110,7 +110,7 @@ namespace GraphVisualizer
         {
             m_LegendLabelStyle = new GUIStyle(GUI.skin.label)
             {
-                margin = {top = 0},
+                margin = { top = 0 },
                 alignment = TextAnchor.UpperLeft
             };
 
@@ -118,14 +118,13 @@ namespace GraphVisualizer
             {
                 normal =
                 {
-                    background = (Texture2D) Resources.Load("Node"),
+                    background = (Texture2D)Resources.Load("Node"),
                     textColor = Color.black,
                 },
                 border = new RectOffset(10, 10, 10, 10),
                 alignment = TextAnchor.MiddleCenter,
                 wordWrap = true,
                 clipping = TextClipping.Clip
-
             };
 
             m_SubTitleStyle = EditorStyles.boldLabel;
@@ -140,7 +139,6 @@ namespace GraphVisualizer
                 alignment = TextAnchor.MiddleLeft,
                 wordWrap = true,
                 clipping = TextClipping.Clip
-
             };
         }
 
@@ -172,6 +170,7 @@ namespace GraphVisualizer
             {
                 legendWidth = Mathf.Max(legendWidth, GUI.skin.label.CalcSize(new GUIContent(legend.label)).x);
             }
+
             legendWidth += s_LegendFixedOverheadWidth;
             return legendWidth;
         }
@@ -294,7 +293,7 @@ namespace GraphVisualizer
                 var cols = m_ColorBar.GetPixels();
                 for (int x = 0; x < nbLevels; x++)
                 {
-                    Color c = Color.Lerp(s_EdgeColorMin, s_EdgeColorMax, (float) x / nbLevels);
+                    Color c = Color.Lerp(s_EdgeColorMin, s_EdgeColorMax, (float)x / nbLevels);
                     cols[x] = c;
                 }
 
@@ -427,6 +426,7 @@ namespace GraphVisualizer
             {
                 nodeSize *= graphSettings.maximumNodeSizeInPixels / nodeSize.y;
             }
+
             return nodeSize;
         }
 
@@ -440,8 +440,8 @@ namespace GraphVisualizer
             int longuestWord = words.Max(s => s.Length);
 
             // Approximate the text rectangle size using magic values.
-            int width = longuestWord * (int) (0.8f * s_NodeMaxFontSize);
-            int height = nbLignes * (int) (1.5f * s_NodeMaxFontSize);
+            int width = longuestWord * (int)(0.8f * s_NodeMaxFontSize);
+            int height = nbLignes * (int)(1.5f * s_NodeMaxFontSize);
 
             float factor = Math.Min(nodeSize.x / width, nodeSize.y / height);
 
@@ -469,7 +469,7 @@ namespace GraphVisualizer
         // Compute the tangents for the graphLayout edges. Assumes that graphLayout is drawn from left to right
         private static void GetTangents(Vector2 start, Vector2 end, out Vector3[] points, out Vector3[] tangents)
         {
-            points = new Vector3[] {start, end};
+            points = new Vector3[] { start, end };
             tangents = new Vector3[2];
 
             // Heuristics to define the length of the tangents and tweak the look of the bezier curves.
