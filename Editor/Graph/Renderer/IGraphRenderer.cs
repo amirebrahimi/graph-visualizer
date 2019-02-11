@@ -28,8 +28,5 @@ namespace GraphVisualizer
 
         // Control the display of the legend.
         public bool showLegend;
-
-        // Custom data specific to the renderer
-        public object customData;
     }
 }

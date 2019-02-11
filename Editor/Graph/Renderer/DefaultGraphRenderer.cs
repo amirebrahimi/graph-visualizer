@@ -63,7 +63,6 @@ namespace GraphVisualizer
             defaults.aspectRatio = s_DefaultAspectRatio;
             defaults.showInspector = true;
             defaults.showLegend = true;
-            defaults.customData = null;
             Draw(graphLayout, drawingArea, defaults);
         }
 
@@ -183,8 +182,7 @@ namespace GraphVisualizer
             {
                 GUI.color = s_SelectedNodeColor;
                 float t = s_SelectedNodeThickness + (active ? s_ActiveNodeThickness : 0.0f);
-                GUI.Box(new Rect(rect.x - t, rect.y - t,
-                        rect.width + 2 * t, rect.height + 2 * t),
+                GUI.Box(new Rect(rect.x - t, rect.y - t, rect.width + 2 * t, rect.height + 2 * t),
                     string.Empty, m_NodeRectStyle);
             }
 
